@@ -15,56 +15,73 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+const Lang = imports.lang;
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const Util = imports.misc.util;
 const GLib = imports.gi.GLib;
 
-let toggleMenuItem;
+let frontPanelAudioToggle;
 
-function _updateFrontPanelAudio(menu, open) {
-  if (!open) {
-    return;
+const FrontPanelAudioToggle = new Lang.Class({
+  Name: 'FrontPanelAudioToggle',
+
+  _init: function (menu) {
+    this.toggleMenuItem = new PopupMenu.PopupSwitchMenuItem('Front Panel Audio', false);
+    this.toggleMenuItem.connect('toggled', this.toggleFrontPanelAudio);
+
+    this.toggleMenuSeparator = new PopupMenu.PopupSeparatorMenuItem();
+
+    menu.connect('open-state-changed', this.updateFrontPanelAudio);
+    menu.addMenuItem(this.toggleMenuItem, 2);
+    menu.addMenuItem(this.toggleMenuSeparator, 3);
+  },
+
+  destroy: function() {
+    this.toggleMenuItem.destroy();
+    this.toggleMenuSeparator.destroy();
+  },
+
+  updateFrontPanelAudio: function (menu, open) {
+    if (!open) {
+      return;
+    }
+
+    let outArgs = GLib.spawn_command_line_sync('env LANG=C amixer sget \'Front Panel\'');
+    let stdout = outArgs[1];
+
+    let regex = /\[(on|off)\]/m;
+    let matches = regex.exec(stdout);
+    let value = matches[1];
+
+    if (value === 'on') {
+      this.toggleMenuItem.setToggleState(true);
+    }
+    else {
+      this.toggleMenuItem.setToggleState(false);
+    }
+  },
+
+  toggleFrontPanelAudio: function (item, event) {
+    if (item.state) {
+        // ENABLED
+        Util.spawnCommandLine('amixer -q sset \'Front Panel\' unmute');
+    } else {
+        // DISABLED
+        Util.spawnCommandLine('amixer -q sset \'Front Panel\' mute');
+    }
   }
-
-  let outArgs = GLib.spawn_command_line_sync('env LANG=C amixer sget \'Front Panel\'');
-  let stdout = outArgs[1];
-
-  let regex = /\[(on|off)\]/m;
-  let matches = regex.exec(stdout);
-  let value = matches[1];
-
-  if (value === 'on') {
-    toggleMenuItem.setToggleState(true);
-  }
-  else {
-    toggleMenuItem.setToggleState(false);
-  }
-}
-
-function _toggleFrontPanelAudio(item, event) {
-  if (item.state) {
-      // ENABLED
-      Util.spawnCommandLine('amixer -q sset \'Front Panel\' unmute');
-  } else {
-      // DISABLED
-      Util.spawnCommandLine('amixer -q sset \'Front Panel\' mute');
-  }
-}
+});
 
 function init() {
+  // TODO: Translations
 }
 
 function enable() {
-    toggleMenuItem = new PopupMenu.PopupSwitchMenuItem('Front Panel Audio', false);
-    toggleMenuItem.connect('toggled', _toggleFrontPanelAudio);
-    toggleMenuSeparator = new PopupMenu.PopupSeparatorMenuItem();
-    Main.panel.statusArea['volume'].menu.connect('open-state-changed', _updateFrontPanelAudio);
-    Main.panel.statusArea['volume'].menu.addMenuItem(toggleMenuItem, 2);
-    Main.panel.statusArea['volume'].menu.addMenuItem(toggleMenuSeparator, 3);
+  frontPanelAudioToggle = new FrontPanelAudioToggle(Main.panel.statusArea['volume'].menu);
 }
 
 function disable() {
-    toggleMenuItem.destroy();
-    toggleMenuSeparator.destroy();
+  frontPanelAudioToggle.destroy();
+  frontPanelAudioToggle = null;
 }
