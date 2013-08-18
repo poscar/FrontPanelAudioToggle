@@ -28,11 +28,11 @@ const FrontPanelAudioToggle = new Lang.Class({
 
   _init: function (menu, atIndex) {
     this.toggleMenuItem = new PopupMenu.PopupSwitchMenuItem('Front Panel Audio', false);
-    this.toggleMenuItem.connect('toggled', this.toggleFrontPanelAudio);
+    this.toggleMenuItem.connect('toggled', Lang.bind(this, this.toggleFrontPanelAudio));
 
     this.toggleMenuSeparator = new PopupMenu.PopupSeparatorMenuItem();
 
-    menu.connect('open-state-changed', this.updateFrontPanelAudio);
+    menu.connect('open-state-changed', Lang.bind(this, this.updateFrontPanelAudio));
     menu.addMenuItem(this.toggleMenuItem, atIndex);
     menu.addMenuItem(this.toggleMenuSeparator, atIndex + 1);
   },
