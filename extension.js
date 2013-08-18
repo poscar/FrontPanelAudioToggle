@@ -27,14 +27,21 @@ const FrontPanelAudioToggle = new Lang.Class({
   Name: 'FrontPanelAudioToggle',
 
   _init: function (menu, atIndex) {
-    this.toggleMenuItem = new PopupMenu.PopupSwitchMenuItem('Front Panel Audio', false);
-    this.toggleMenuItem.connect('toggled', Lang.bind(this, this.toggleFrontPanelAudio));
+    this.card = this.findFrontPanelCard();
 
     this.toggleMenuSeparator = new PopupMenu.PopupSeparatorMenuItem();
 
-    menu.connect('open-state-changed', Lang.bind(this, this.updateFrontPanelAudio));
-    menu.addMenuItem(this.toggleMenuItem, atIndex);
-    menu.addMenuItem(this.toggleMenuSeparator, atIndex + 1);
+    if (this.card !== -1) {
+      this.toggleMenuItem = new PopupMenu.PopupSwitchMenuItem('Front Panel Audio', false);
+      this.toggleMenuItem.connect('toggled', Lang.bind(this, this.toggleFrontPanelAudio));
+      menu.connect('open-state-changed', Lang.bind(this, this.updateFrontPanelAudio));
+    }
+    else {
+      this.toggleMenuItem = new PopupMenu.PopupMenuItem('Front Panel Audio Not Found');
+    }
+
+    menu.addMenuItem(this.toggleMenuSeparator, atIndex);
+    menu.addMenuItem(this.toggleMenuItem, atIndex + 1);
   },
 
   destroy: function() {
@@ -42,12 +49,36 @@ const FrontPanelAudioToggle = new Lang.Class({
     this.toggleMenuSeparator.destroy();
   },
 
+  findFrontPanelCard: function () {
+    let deviceList = GLib.spawn_command_line_sync("env LANG=C aplay -l")[1].toString();
+    let deviceLines = deviceList.split('\n');
+    let maxCard = 0;
+
+    for (var lineIdx in deviceLines) {
+      var line = deviceLines[lineIdx];
+      var cardMatch = /card\s*(\d+):/.exec(line);
+      if (cardMatch && cardMatch[1]) {
+        maxCard = Math.max(maxCard, cardMatch[1]);
+      }
+    }
+
+    for (let card = 0; card <= maxCard; card++) {
+        let cardControls = GLib.spawn_command_line_sync("env LANG=C amixer -c " + card + " scontrols")[1].toString();
+        let hasFrontPanel = /Front Panel/.test(cardControls);
+        if (hasFrontPanel) {
+            return card;
+        }
+    }
+
+    return -1;
+  },
+
   updateFrontPanelAudio: function (menu, open) {
     if (!open) {
       return;
     }
 
-    let outArgs = GLib.spawn_command_line_sync('env LANG=C amixer sget \'Front Panel\'');
+    let outArgs = GLib.spawn_command_line_sync('env LANG=C amixer -c ' + this.card + ' sget \'Front Panel\'');
     let stdout = outArgs[1];
 
     let regex = /\[(on|off)\]/m;
@@ -65,20 +96,19 @@ const FrontPanelAudioToggle = new Lang.Class({
   toggleFrontPanelAudio: function (item, event) {
     if (item.state) {
         // ENABLED
-        Util.spawnCommandLine('amixer -q sset \'Front Panel\' unmute');
+        Util.spawnCommandLine('amixer -c ' + this.card + ' -q sset \'Front Panel\' unmute');
     } else {
         // DISABLED
-        Util.spawnCommandLine('amixer -q sset \'Front Panel\' mute');
+        Util.spawnCommandLine('amixer -c ' + this.card + ' -q sset \'Front Panel\' mute');
     }
   }
 });
 
 function init() {
-  // TODO: Translations
 }
 
 function enable() {
-  frontPanelAudioToggle = new FrontPanelAudioToggle(Main.panel.statusArea['volume'].menu, 2);
+  frontPanelAudioToggle = new FrontPanelAudioToggle(Main.panel.statusArea['volume'].menu, 1);
 }
 
 function disable() {
