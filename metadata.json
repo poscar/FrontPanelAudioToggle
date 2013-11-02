@@ -1,5 +1,5 @@
 {
-	"shell-version": ["3.8.4"],
+	"shell-version": ["3.10"],
 	"uuid": "Front_Panel_Audio_Toggle@oscaraperez.com",
 	"name": "Front Panel Audio Toggle",
 	"description": "Allows front panel audio to be toggled from the shell's audio menu.  Useful for cards that do not have automatic front panel sensing (e.g. Asus Xonar DX)."

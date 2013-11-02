@@ -29,8 +29,6 @@ const FrontPanelAudioToggle = new Lang.Class({
   _init: function (menu, atIndex) {
     this.card = this.findFrontPanelCard();
 
-    this.toggleMenuSeparator = new PopupMenu.PopupSeparatorMenuItem();
-
     if (this.card !== -1) {
       this.toggleMenuItem = new PopupMenu.PopupSwitchMenuItem('Front Panel Audio', false);
       this.toggleMenuItem.connect('toggled', Lang.bind(this, this.toggleFrontPanelAudio));
@@ -40,13 +38,11 @@ const FrontPanelAudioToggle = new Lang.Class({
       this.toggleMenuItem = new PopupMenu.PopupMenuItem('Front Panel Audio Not Found');
     }
 
-    menu.addMenuItem(this.toggleMenuSeparator, atIndex);
-    menu.addMenuItem(this.toggleMenuItem, atIndex + 1);
+    menu.addMenuItem(this.toggleMenuItem, atIndex);
   },
 
   destroy: function() {
     this.toggleMenuItem.destroy();
-    this.toggleMenuSeparator.destroy();
   },
 
   findFrontPanelCard: function () {
@@ -108,7 +104,7 @@ function init() {
 }
 
 function enable() {
-  frontPanelAudioToggle = new FrontPanelAudioToggle(Main.panel.statusArea['volume'].menu, 1);
+  frontPanelAudioToggle = new FrontPanelAudioToggle(Main.panel.statusArea.aggregateMenu._volume._volumeMenu, 1);
 }
 
 function disable() {
